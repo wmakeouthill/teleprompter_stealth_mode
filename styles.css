@@ -1,0 +1,418 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    cursor: default !important; /* Cursor sempre padrão */
+    user-select: none !important; /* Texto não selecionável */
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: transparent;
+    overflow: hidden;
+    -webkit-app-region: drag; /* Permite arrastar a janela */
+    user-select: none !important; /* Previne seleção de texto */
+    cursor: default !important;
+}
+
+.container {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    position: relative;
+}
+
+/* Área do Teleprompter */
+.teleprompter-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 40px 60px 40px 40px;
+    padding-top: 45px; /* Espaço para o header fixo */
+    overflow-y: auto;
+    -webkit-app-region: no-drag;
+    position: relative;
+}
+
+.teleprompter-content {
+    max-width: 900px;
+    width: 100%;
+    line-height: 1.8;
+    transition: all 0.3s ease;
+    user-select: none !important; /* Texto não selecionável */
+    -webkit-app-region: no-drag; /* Texto não deve arrastar a janela */
+    pointer-events: auto;
+    cursor: default !important;
+}
+
+/* Botões Stealth (pequenos e redondos) - Header Fixo */
+.stealth-controls {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 35px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 5px 10px;
+    gap: 5px;
+    z-index: 1001;
+    -webkit-app-region: drag; /* Permite arrastar pela área do header */
+    background: rgba(0, 0, 0, 0.1); /* Leve fundo para destacar área de drag */
+    pointer-events: auto;
+}
+
+.stealth-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0, 0, 0, 0.6);
+    color: rgba(255, 255, 255, 0.7);
+    cursor: default !important;
+    font-size: 14px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    line-height: 1;
+    padding: 0;
+    -webkit-app-region: no-drag; /* Botões não arrastam */
+    pointer-events: auto;
+    user-select: none !important;
+}
+
+.stealth-btn:hover {
+    background: rgba(0, 0, 0, 0.9);
+    color: rgba(255, 255, 255, 1);
+    transform: scale(1.1);
+}
+
+.config-btn {
+    font-size: 12px;
+}
+
+.minimize-btn {
+    font-size: 18px;
+    padding-bottom: 2px;
+}
+
+.close-btn {
+    font-size: 18px;
+}
+
+.close-btn:hover {
+    background: rgba(220, 20, 20, 0.9);
+}
+
+/* Painel de Controle Stealth (Dropdown) */
+.control-panel.stealth-panel {
+    position: absolute;
+    top: 45px; /* Abaixo do header fixo */
+    right: 10px;
+    width: 320px;
+    max-height: calc(100vh - 60px);
+    background: rgba(10, 10, 10, 0.95);
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+    -webkit-app-region: no-drag;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.control-panel.stealth-panel.show {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: all;
+}
+
+.control-content {
+    padding: 15px;
+    overflow-y: auto;
+    max-height: calc(100vh - 60px);
+}
+
+.control-group {
+    margin-bottom: 15px;
+}
+
+.control-group label {
+    display: block;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 11px;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.control-group input[type="range"] {
+    width: 100%;
+    margin: 5px 0;
+    -webkit-appearance: none;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    outline: none;
+}
+
+.control-group input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 50%;
+    cursor: default !important;
+}
+
+.control-group input[type="range"]::-webkit-slider-thumb:hover {
+    background: rgba(255, 255, 255, 1);
+}
+
+.control-group input[type="color"] {
+    width: 50px;
+    height: 28px;
+    border: none;
+    border-radius: 4px;
+    cursor: default !important;
+    background: transparent;
+}
+
+.control-group input[type="file"] {
+    display: none;
+}
+
+.control-group select {
+    width: 100%;
+    padding: 6px;
+    border-radius: 4px;
+    background: rgba(30, 30, 30, 0.9);
+    color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    font-size: 12px;
+    cursor: default !important;
+}
+
+.control-group select:hover {
+    background: rgba(40, 40, 40, 0.9);
+}
+
+.control-group textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 8px;
+    border-radius: 4px;
+    background: rgba(20, 20, 20, 0.9);
+    color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    resize: vertical;
+    outline: none;
+}
+
+.control-group textarea:focus {
+    border-color: rgba(255, 255, 255, 0.4);
+    background: rgba(25, 25, 25, 0.9);
+}
+
+.control-group span {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 10px;
+    margin-left: 8px;
+}
+
+.control-group label input[type="checkbox"] {
+    margin-right: 6px;
+    cursor: default !important;
+}
+
+.btn-primary, .btn-secondary {
+    width: 100%;
+    padding: 8px;
+    border: none;
+    border-radius: 4px;
+    cursor: default !important;
+    font-size: 12px;
+    margin-top: 5px;
+    transition: all 0.2s;
+    font-weight: 500;
+    user-select: none !important;
+}
+
+.btn-primary {
+    background: rgba(76, 175, 80, 0.8);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: rgba(76, 175, 80, 1);
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: rgba(33, 150, 243, 0.8);
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: rgba(33, 150, 243, 1);
+    transform: translateY(-1px);
+}
+
+/* Estilos para Markdown renderizado */
+.teleprompter-content h1 {
+    font-size: 1.15em;
+    margin: 15px 0 10px 0;
+    font-weight: bold;
+}
+
+.teleprompter-content h2 {
+    font-size: 1.1em;
+    margin: 12px 0 8px 0;
+    font-weight: bold;
+}
+
+.teleprompter-content h3 {
+    font-size: 1.05em;
+    margin: 10px 0 6px 0;
+    font-weight: bold;
+}
+
+.teleprompter-content h4 {
+    font-size: 1.02em;
+    margin: 8px 0 4px 0;
+    font-weight: bold;
+}
+
+.teleprompter-content h5 {
+    font-size: 1.01em;
+    margin: 6px 0 4px 0;
+    font-weight: bold;
+}
+
+.teleprompter-content h6 {
+    font-size: 1em;
+    margin: 6px 0 4px 0;
+    font-weight: bold;
+}
+
+.teleprompter-content p {
+    margin: 15px 0;
+}
+
+.teleprompter-content ul, .teleprompter-content ol {
+    margin: 15px 0;
+    padding-left: 30px;
+}
+
+.teleprompter-content li {
+    margin: 8px 0;
+}
+
+.teleprompter-content blockquote {
+    border-left: 4px solid currentColor;
+    padding-left: 20px;
+    margin: 15px 0;
+    opacity: 0.8;
+}
+
+.teleprompter-content code {
+    background: rgba(255, 255, 255, 0.15);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+}
+
+.teleprompter-content pre {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 15px;
+    border-radius: 5px;
+    overflow-x: auto;
+    margin: 15px 0;
+}
+
+.teleprompter-content pre code {
+    background: none;
+    padding: 0;
+}
+
+.teleprompter-content strong {
+    font-weight: bold;
+}
+
+.teleprompter-content em {
+    font-style: italic;
+}
+
+.placeholder {
+    color: rgba(255, 255, 255, 0.4);
+    text-align: center;
+    padding: 40px;
+}
+
+.placeholder p {
+    margin: 10px 0;
+}
+
+/* Handle de redimensionamento */
+.resize-handle {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    cursor: default !important;
+    z-index: 1002;
+    -webkit-app-region: no-drag;
+    background: transparent;
+}
+
+.resize-handle::after {
+    content: '';
+    position: absolute;
+    bottom: 3px;
+    right: 3px;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 0 12px 12px;
+    border-color: transparent transparent rgba(255, 255, 255, 0.3) transparent;
+}
+
+.resize-handle:hover::after {
+    border-color: transparent transparent rgba(255, 255, 255, 0.6) transparent;
+}
+
+/* Scrollbar personalizada */
+.control-panel::-webkit-scrollbar,
+.teleprompter-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.control-panel::-webkit-scrollbar-track,
+.teleprompter-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.control-panel::-webkit-scrollbar-thumb,
+.teleprompter-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+.control-panel::-webkit-scrollbar-thumb:hover,
+.teleprompter-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.4);
+}

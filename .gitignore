@@ -1,0 +1,79 @@
+# Dependências
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+# package-lock.json deve ser commitado para garantir versões consistentes
+
+# Arquivos de ambiente
+.env
+.env.local
+.env.*.local
+.env.production
+
+# Build e distribuição
+dist/
+build/
+out/
+*.exe
+*.dmg
+*.deb
+*.rpm
+*.AppImage
+
+# Arquivos de sistema operacional
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Arquivos de editores e IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# Arquivos temporários
+*.tmp
+*.temp
+*.cache
+*.pid
+*.seed
+*.pid.lock
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Arquivos específicos do Electron
+*.asar
+app/dist/
+release/
+packages/
+
+# Arquivos de teste e cobertura
+coverage/
+.nyc_output/
+*.lcov
+.jest/
+
+# Arquivos de cache do sistema
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+.vuepress/dist/
