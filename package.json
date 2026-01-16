@@ -5,7 +5,12 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "dev": "electron . --dev"
+    "dev": "electron . --dev",
+    "clean": "rimraf dist",
+    "build": "npm run clean && electron-builder",
+    "build:win": "npm run clean && electron-builder --win --x64",
+    "build:portable": "npm run clean && electron-builder --win portable --x64",
+    "generate-icon": "node scripts/generate-icon.js"
   },
   "keywords": [
     "teleprompter",
@@ -15,8 +20,82 @@
   ],
   "author": "",
   "license": "MIT",
+  "build": {
+    "appId": "com.teleprompter.stealthmode",
+    "productName": "Teleprompter Stealth",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!node_modules/**/*",
+      "node_modules/marked/**/*",
+      "node_modules/electron-store/**/*",
+      "node_modules/conf/**/*",
+      "node_modules/type-fest/**/*",
+      "node_modules/dot-prop/**/*",
+      "node_modules/is-obj/**/*",
+      "node_modules/ajv/**/*",
+      "node_modules/ajv-formats/**/*",
+      "node_modules/atomically/**/*",
+      "node_modules/debounce-fn/**/*",
+      "node_modules/env-paths/**/*",
+      "node_modules/json-schema-typed/**/*",
+      "node_modules/onetime/**/*",
+      "node_modules/pkg-up/**/*",
+      "node_modules/find-up/**/*",
+      "node_modules/semver/**/*",
+      "!**/*.{md,log}",
+      "!dist",
+      "!.git"
+    ],
+    "extraResources": [
+      {
+        "from": "build/icon.ico",
+        "to": "build/icon.ico"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "${productName}-${version}-portable.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.${ext}"
+    },
+    "compression": "maximum",
+    "nsis": false,
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/electron-store/**/*",
+      "node_modules/conf/**/*",
+      "node_modules/type-fest/**/*",
+      "node_modules/dot-prop/**/*",
+      "node_modules/is-obj/**/*",
+      "node_modules/ajv/**/*",
+      "node_modules/ajv-formats/**/*",
+      "node_modules/atomically/**/*",
+      "node_modules/debounce-fn/**/*",
+      "node_modules/env-paths/**/*",
+      "node_modules/json-schema-typed/**/*",
+      "node_modules/onetime/**/*",
+      "node_modules/pkg-up/**/*",
+      "node_modules/semver/**/*"
+    ]
+  },
   "devDependencies": {
-    "electron": "^28.0.0"
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
+    "rimraf": "^5.0.5",
+    "sharp": "^0.33.0",
+    "to-ico": "^1.1.5"
   },
   "dependencies": {
     "marked": "^11.1.1",

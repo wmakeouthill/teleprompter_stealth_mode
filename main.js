@@ -1,5 +1,6 @@
-const { app, BrowserWindow, ipcMain, screen, globalShortcut } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, globalShortcut, Tray, Menu } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const Store = require('electron-store');
 
 const store = new Store();
@@ -7,6 +8,7 @@ const store = new Store();
 let mainWindow;
 let tBubbleWindow = null;
 let hiddenBounds = null;
+let tray = null;
 
 function createWindow() {
   // Carregar configurações salvas da janela
@@ -43,8 +45,17 @@ function createWindow() {
 
   mainWindow.loadFile('index.html');
 
-  // Abrir DevTools em modo desenvolvimento (comentado por padrão)
-  // mainWindow.webContents.openDevTools();
+  // Abrir DevTools apenas em modo desenvolvimento
+  if (process.argv.includes('--dev')) {
+    mainWindow.webContents.openDevTools();
+  }
+  
+  // Otimizações de performance para produção
+  if (!process.argv.includes('--dev')) {
+    mainWindow.webContents.on('devtools-opened', () => {
+      mainWindow.webContents.closeDevTools();
+    });
+  }
 
   // Salvar estado da janela antes de fechar (evento 'close' é antes de destruir)
   mainWindow.on('close', (event) => {
@@ -339,11 +350,114 @@ function createWindow() {
   // Você pode adicionar atalhos de teclado aqui se necessário
 }
 
-app.whenReady().then(createWindow);
+// Função para criar ícone na bandeja do sistema
+function createTray() {
+  // Determinar o caminho do ícone (funciona em desenvolvimento e produção)
+  let iconPath;
+  if (app.isPackaged) {
+    // Em produção, o ícone está em extraResources (resources/build/icon.ico)
+    iconPath = path.join(process.resourcesPath, 'build', 'icon.ico');
+    
+    // Se não encontrar, tentar outros caminhos possíveis
+    if (!fs.existsSync(iconPath)) {
+      // Tentar no diretório do app (app.asar.unpacked)
+      iconPath = path.join(__dirname, '..', 'build', 'icon.ico');
+    }
+    if (!fs.existsSync(iconPath)) {
+      // Tentar diretamente em resources
+      iconPath = path.join(process.resourcesPath, 'icon.ico');
+    }
+    
+    // Log para debug (apenas em dev)
+    if (process.argv.includes('--dev') && !fs.existsSync(iconPath)) {
+      console.log('Ícone não encontrado. Tentou:', path.join(process.resourcesPath, 'build', 'icon.ico'));
+      console.log('process.resourcesPath:', process.resourcesPath);
+      console.log('__dirname:', __dirname);
+    }
+  } else {
+    // Em desenvolvimento
+    iconPath = path.join(__dirname, 'build', 'icon.ico');
+  }
+  
+  // Verificar se o arquivo existe antes de criar o Tray
+  if (!fs.existsSync(iconPath)) {
+    console.error('Ícone não encontrado em:', iconPath);
+    // Usar ícone padrão do Electron se disponível
+    return;
+  }
+  
+  // Criar ícone na bandeja
+  tray = new Tray(iconPath);
+  
+  // Criar menu de contexto para o ícone
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Mostrar/Ocultar (Ctrl+T)',
+      click: () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          const isMinimized = mainWindow.isMinimized();
+          const isVisible = mainWindow.isVisible();
+          
+          if (isMinimized || !isVisible) {
+            if (hiddenBounds) {
+              mainWindow.setBounds(hiddenBounds);
+            }
+            mainWindow.show();
+            mainWindow.focus();
+            mainWindow.restore();
+          } else {
+            hiddenBounds = mainWindow.getBounds();
+            mainWindow.minimize();
+          }
+        }
+      }
+    },
+    {
+      label: 'Fechar',
+      click: () => {
+        app.quit();
+      }
+    }
+  ]);
+  
+  tray.setToolTip('Teleprompter Stealth Mode');
+  tray.setContextMenu(contextMenu);
+  
+  // Clique simples no ícone também mostra/oculta
+  tray.on('click', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      const isMinimized = mainWindow.isMinimized();
+      const isVisible = mainWindow.isVisible();
+      
+      if (isMinimized || !isVisible) {
+        if (hiddenBounds) {
+          mainWindow.setBounds(hiddenBounds);
+        }
+        mainWindow.show();
+        mainWindow.focus();
+        mainWindow.restore();
+      } else {
+        hiddenBounds = mainWindow.getBounds();
+        mainWindow.minimize();
+      }
+    }
+  });
+}
+
+app.whenReady().then(() => {
+  createWindow();
+  createTray();
+});
 
 app.on('window-all-closed', () => {
-  // Não fechar app se ainda houver a bolinha T
+  // Não fechar app se ainda houver a bolinha T ou o ícone na bandeja
   if (tBubbleWindow && !tBubbleWindow.isDestroyed()) {
+    return;
+  }
+  
+  // Manter app rodando se houver ícone na bandeja (Windows/Linux)
+  // O app só fecha quando o usuário escolher "Fechar" no menu do ícone
+  if (process.platform !== 'darwin' && tray) {
     return;
   }
   
