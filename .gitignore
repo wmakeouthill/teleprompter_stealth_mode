@@ -5,6 +5,10 @@ yarn-debug.log*
 yarn-error.log*
 # package-lock.json deve ser commitado para garantir versões consistentes
 
+# Markdown files (exceto README.md)
+*.md
+!README.md
+
 # Arquivos de ambiente
 .env
 .env.local
