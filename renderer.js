@@ -27,6 +27,7 @@ const markdownInput = document.getElementById('markdownInput');
 const updateBtn = document.getElementById('updateBtn');
 const resetBtn = document.getElementById('resetBtn');
 const alwaysOnTop = document.getElementById('alwaysOnTop');
+const stealthMode = document.getElementById('stealthMode');
 const screenSelect = document.getElementById('screenSelect');
 const teleprompterContent = document.getElementById('teleprompterContent');
 const teleprompterContainer = document.getElementById('teleprompterContainer');
@@ -34,6 +35,7 @@ const resizeHandle = document.getElementById('resizeHandle');
 
 let autoScrollInterval = null;
 let currentScrollSpeed = 0;
+let savedScrollSpeed = 0; // Guarda a velocidade antes de pausar
 let isResizing = false;
 let isConfigOpen = false;
 
@@ -111,7 +113,7 @@ fontSizeSlider.addEventListener('input', (e) => {
 speedSlider.addEventListener('input', (e) => {
     const speed = parseInt(e.target.value);
     currentScrollSpeed = speed;
-    
+
     if (speed === 0) {
         speedValue.textContent = '0 (manual)';
         stopAutoScroll();
@@ -119,7 +121,7 @@ speedSlider.addEventListener('input', (e) => {
         speedValue.textContent = speed + ' px/s';
         startAutoScroll(speed);
     }
-    
+
     saveToLocalStorage('scrollSpeed', speed);
 });
 
@@ -127,7 +129,7 @@ speedSlider.addEventListener('input', (e) => {
 scrollPosition.addEventListener('input', (e) => {
     const percent = parseFloat(e.target.value);
     scrollValue.textContent = percent.toFixed(1) + '%';
-    
+
     const container = teleprompterContainer;
     const maxScroll = container.scrollHeight - container.clientHeight;
     container.scrollTop = (percent / 100) * maxScroll;
@@ -137,7 +139,7 @@ scrollPosition.addEventListener('input', (e) => {
 teleprompterContainer.addEventListener('scroll', () => {
     const container = teleprompterContainer;
     const scrollPercent = (container.scrollTop / (container.scrollHeight - container.clientHeight)) * 100;
-    
+
     if (!isNaN(scrollPercent) && isFinite(scrollPercent)) {
         scrollPosition.value = scrollPercent;
         scrollValue.textContent = scrollPercent.toFixed(1) + '%';
@@ -147,17 +149,17 @@ teleprompterContainer.addEventListener('scroll', () => {
 // Auto-scroll
 function startAutoScroll(speed) {
     stopAutoScroll();
-    
+
     autoScrollInterval = setInterval(() => {
         teleprompterContainer.scrollTop += speed / 10; // Atualiza a cada 100ms
-        
+
         // Sincronizar slider
         const scrollPercent = (teleprompterContainer.scrollTop / (teleprompterContainer.scrollHeight - teleprompterContainer.clientHeight)) * 100;
         if (!isNaN(scrollPercent) && isFinite(scrollPercent)) {
             scrollPosition.value = scrollPercent;
             scrollValue.textContent = scrollPercent.toFixed(1) + '%';
         }
-        
+
         // Parar se chegou ao fim
         if (teleprompterContainer.scrollTop >= teleprompterContainer.scrollHeight - teleprompterContainer.clientHeight) {
             stopAutoScroll();
@@ -248,10 +250,10 @@ function updateTeleprompter() {
     if (markdown.trim()) {
         const html = marked.parse(markdown);
         teleprompterContent.innerHTML = html;
-        
+
         // Salvar markdown no localStorage
         saveToLocalStorage('markdown', markdown);
-        
+
         // Resetar scroll
         teleprompterContainer.scrollTop = 0;
         scrollPosition.value = 0;
@@ -276,27 +278,27 @@ resetBtn.addEventListener('click', () => {
         transparencySlider.value = 1;
         transparencyValue.textContent = '100%';
         ipcRenderer.send('set-opacity', 1);
-        
+
         fontSizeSlider.value = 32;
         fontSizeValue.textContent = '32px';
         teleprompterContent.style.fontSize = '32px';
-        
+
         speedSlider.value = 0;
         speedValue.textContent = '0 (manual)';
         stopAutoScroll();
-        
+
         scrollPosition.value = 0;
         scrollValue.textContent = '0%';
         teleprompterContainer.scrollTop = 0;
-        
+
         textAlign.value = 'center';
         teleprompterContent.style.textAlign = 'center';
-        
+
         backgroundColor.value = '#000000';
         backgroundOpacity.value = 0;
         bgOpacityValue.textContent = '0%';
         teleprompterContainer.style.backgroundColor = 'transparent';
-        
+
         textColor.value = '#ffffff';
         teleprompterContent.style.color = '#ffffff';
     }
@@ -306,6 +308,12 @@ resetBtn.addEventListener('click', () => {
 alwaysOnTop.addEventListener('change', (e) => {
     ipcRenderer.send('toggle-always-on-top', e.target.checked);
     saveToLocalStorage('alwaysOnTop', e.target.checked);
+});
+
+// Modo invisível (proteção contra captura de tela)
+stealthMode.addEventListener('change', (e) => {
+    ipcRenderer.send('toggle-stealth-mode', e.target.checked);
+    saveToLocalStorage('stealthMode', e.target.checked);
 });
 
 // Carregar telas disponíveis
@@ -318,7 +326,7 @@ ipcRenderer.on('screens-list', (event, screens) => {
     while (screenSelect.children.length > 1) {
         screenSelect.removeChild(screenSelect.lastChild);
     }
-    
+
     screens.forEach((screen, index) => {
         const option = document.createElement('option');
         option.value = index;
@@ -326,7 +334,7 @@ ipcRenderer.on('screens-list', (event, screens) => {
         option.textContent = `Tela ${index + 1} (${bounds.width}x${bounds.height})`;
         screenSelect.appendChild(option);
     });
-    
+
     // Aplicar tela salva se houver
     const savedScreen = loadFromLocalStorage('selectedScreen', 'current');
     if (savedScreen !== 'current' && savedScreen !== null) {
@@ -352,19 +360,19 @@ let startX, startY, startWidth, startHeight;
 resizeHandle.addEventListener('mousedown', (e) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     startX = e.screenX;
     startY = e.screenY;
-    
+
     // Obter tamanho atual da janela via IPC
     ipcRenderer.send('get-window-size');
     ipcRenderer.once('window-size', (event, width, height) => {
         startWidth = width;
         startHeight = height;
         isResizing = true;
-        
+
         document.body.style.webkitAppRegion = 'no-drag';
-        
+
         document.addEventListener('mousemove', handleResize);
         document.addEventListener('mouseup', stopResize);
     });
@@ -372,13 +380,13 @@ resizeHandle.addEventListener('mousedown', (e) => {
 
 function handleResize(e) {
     if (!isResizing || !startWidth || !startHeight) return;
-    
+
     const deltaX = e.screenX - startX;
     const deltaY = e.screenY - startY;
-    
+
     const newWidth = Math.max(200, startWidth + deltaX);
     const newHeight = Math.max(150, startHeight + deltaY);
-    
+
     ipcRenderer.send('resize-window', Math.round(newWidth), Math.round(newHeight));
 }
 
@@ -446,29 +454,29 @@ function loadSavedSettings() {
         markdownInput.value = savedMarkdown;
         updateTeleprompter();
     }
-    
+
     // Carregar transparência
     const savedTransparency = loadFromLocalStorage('transparency', 1);
     transparencySlider.value = savedTransparency;
     transparencyValue.textContent = Math.round(savedTransparency * 100) + '%';
     ipcRenderer.send('set-opacity', savedTransparency);
-    
+
     // Carregar tamanho da fonte
     const savedFontSize = loadFromLocalStorage('fontSize', 32);
     fontSizeSlider.value = savedFontSize;
     fontSizeValue.textContent = savedFontSize + 'px';
     teleprompterContent.style.fontSize = savedFontSize + 'px';
-    
+
     // Carregar alinhamento
     const savedTextAlign = loadFromLocalStorage('textAlign', 'center');
     textAlign.value = savedTextAlign;
     teleprompterContent.style.textAlign = savedTextAlign;
-    
+
     // Carregar cor do texto
     const savedTextColor = loadFromLocalStorage('textColor', '#ffffff');
     textColor.value = savedTextColor;
     teleprompterContent.style.color = savedTextColor;
-    
+
     // Carregar cor de fundo
     const savedBgColor = loadFromLocalStorage('backgroundColor', '#000000');
     const savedBgOpacity = loadFromLocalStorage('backgroundOpacity', 0);
@@ -476,12 +484,17 @@ function loadSavedSettings() {
     backgroundOpacity.value = savedBgOpacity;
     bgOpacityValue.textContent = savedBgOpacity + '%';
     updateBackgroundColor();
-    
+
     // Carregar sempre no topo
     const savedAlwaysOnTop = loadFromLocalStorage('alwaysOnTop', true);
     alwaysOnTop.checked = savedAlwaysOnTop;
     ipcRenderer.send('toggle-always-on-top', savedAlwaysOnTop);
-    
+
+    // Carregar modo invisível (padrão: ativado)
+    const savedStealthMode = loadFromLocalStorage('stealthMode', true);
+    stealthMode.checked = savedStealthMode;
+    ipcRenderer.send('toggle-stealth-mode', savedStealthMode);
+
     // Carregar velocidade de scroll
     const savedScrollSpeed = loadFromLocalStorage('scrollSpeed', 0);
     speedSlider.value = savedScrollSpeed;
@@ -490,7 +503,7 @@ function loadSavedSettings() {
         currentScrollSpeed = savedScrollSpeed;
         startAutoScroll(savedScrollSpeed);
     }
-    
+
     // Tela será carregada quando screens-list for recebido
     // Path do arquivo será carregado quando necessário
 }
@@ -527,32 +540,40 @@ loadSavedSettings();
 
 // Teclas de atalho
 document.addEventListener('keydown', (e) => {
-    // ESC para fechar configurações
-    if (e.key === 'Escape' && isConfigOpen) {
+    // ESC para abrir/fechar configurações (toggle)
+    if (e.key === 'Escape') {
+        e.preventDefault();
+        if (!isConfigOpen) {
+            loadScreens(); // Carregar telas ao abrir
+        }
         toggleConfigPanel();
     }
-    
+
     // Espaço para pausar/retomar auto-scroll
     if (e.key === ' ' && !e.target.matches('textarea, input')) {
         e.preventDefault();
-        if (currentScrollSpeed > 0) {
+        if (autoScrollInterval) {
+            // Está rolando, pausar
+            savedScrollSpeed = currentScrollSpeed; // Salvar velocidade atual
             stopAutoScroll();
-            const savedSpeed = currentScrollSpeed;
-            currentScrollSpeed = 0;
             speedSlider.value = 0;
             speedValue.textContent = '0 (pausado)';
-        } else if (speedSlider.value > 0) {
-            currentScrollSpeed = parseInt(speedSlider.value);
-            startAutoScroll(currentScrollSpeed);
+            currentScrollSpeed = 0;
+        } else if (savedScrollSpeed > 0) {
+            // Está pausado e tinha velocidade salva, retomar
+            currentScrollSpeed = savedScrollSpeed;
+            speedSlider.value = savedScrollSpeed;
+            speedValue.textContent = savedScrollSpeed + ' px/s';
+            startAutoScroll(savedScrollSpeed);
         }
     }
-    
+
     // Ctrl+Q para fechar
     if (e.key === 'q' && e.ctrlKey) {
         e.preventDefault();
         ipcRenderer.send('close-app');
     }
-    
+
     // Ctrl+T para toggle minimizar/mostrar
     if (e.key === 't' && e.ctrlKey) {
         e.preventDefault();

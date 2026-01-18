@@ -7,6 +7,8 @@ export interface InstructionStep {
     title: string;
     description: string;
     imageAlt: string;
+    imageSrc?: string;
+    mediaType?: 'image' | 'video';
 }
 
 /**

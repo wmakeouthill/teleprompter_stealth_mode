@@ -15,10 +15,10 @@ function createWindow() {
   const savedBounds = store.get('windowBounds', null);
   const savedOpacity = store.get('opacity', 1.0);
   const savedAlwaysOnTop = store.get('alwaysOnTop', true);
-  
+
   const defaultWidth = 1200;
   const defaultHeight = 800;
-  
+
   // Criar janela transparente e sempre no topo
   mainWindow = new BrowserWindow({
     width: savedBounds ? savedBounds.width : defaultWidth,
@@ -38,8 +38,11 @@ function createWindow() {
     opacity: savedOpacity
   });
 
-  // Tentar proteger conteúdo de captura de tela (Windows/Linux)
-  if (process.platform === 'win32' || process.platform === 'linux') {
+  // Carregar configuração de stealth mode (padrão: ativado)
+  const savedStealthMode = store.get('stealthMode', true);
+
+  // Tentar proteger conteúdo de captura de tela (Windows/Linux) se stealth mode ativado
+  if ((process.platform === 'win32' || process.platform === 'linux') && savedStealthMode) {
     mainWindow.setContentProtection(true);
   }
 
@@ -49,7 +52,7 @@ function createWindow() {
   if (process.argv.includes('--dev')) {
     mainWindow.webContents.openDevTools();
   }
-  
+
   // Otimizações de performance para produção
   if (!process.argv.includes('--dev')) {
     mainWindow.webContents.on('devtools-opened', () => {
@@ -63,7 +66,7 @@ function createWindow() {
     // Se for um close real (botão fechar ou Ctrl+Q), salvar e fechar
     // Para diferenciar, vamos salvar sempre mas não prevenir o close aqui
     // O preventDefault será usado apenas se necessário
-    
+
     // Salvar estado da janela ao fechar (antes de ser destruída)
     try {
       if (mainWindow && !mainWindow.isDestroyed()) {
@@ -76,15 +79,15 @@ function createWindow() {
       // Ignorar erros ao salvar (janela pode estar sendo destruída)
       // Não fazer nada, apenas evitar crash
     }
-    
+
     // Destruir bolinha T se existir
     destroyTBubble();
   });
-  
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
-  
+
   // Salvar bounds periodicamente (ao mover ou redimensionar)
   let saveBoundsTimeout;
   mainWindow.on('move', () => {
@@ -100,7 +103,7 @@ function createWindow() {
       }
     }, 500);
   });
-  
+
   mainWindow.on('resize', () => {
     clearTimeout(saveBoundsTimeout);
     saveBoundsTimeout = setTimeout(() => {
@@ -147,10 +150,10 @@ function createWindow() {
       const displays = screen.getAllDisplays();
       for (const display of displays) {
         const bounds = display.bounds;
-        if (hiddenBounds.x >= bounds.x && 
-            hiddenBounds.x < bounds.x + bounds.width &&
-            hiddenBounds.y >= bounds.y && 
-            hiddenBounds.y < bounds.y + bounds.height) {
+        if (hiddenBounds.x >= bounds.x &&
+          hiddenBounds.x < bounds.x + bounds.width &&
+          hiddenBounds.y >= bounds.y &&
+          hiddenBounds.y < bounds.y + bounds.height) {
           targetDisplay = display;
           break;
         }
@@ -161,18 +164,18 @@ function createWindow() {
       const displays = screen.getAllDisplays();
       for (const display of displays) {
         const displayBounds = display.bounds;
-        if (bounds.x >= displayBounds.x && 
-            bounds.x < displayBounds.x + displayBounds.width &&
-            bounds.y >= displayBounds.y && 
-            bounds.y < displayBounds.y + displayBounds.height) {
+        if (bounds.x >= displayBounds.x &&
+          bounds.x < displayBounds.x + displayBounds.width &&
+          bounds.y >= displayBounds.y &&
+          bounds.y < displayBounds.y + displayBounds.height) {
           targetDisplay = display;
           break;
         }
       }
     }
-    
+
     const bounds = targetDisplay.bounds;
-    
+
     // Posição no canto INFERIOR direito da tela onde o app está
     // Considerando espaço para barra de tarefas do Windows
     const bubbleSize = 50;
@@ -204,7 +207,7 @@ function createWindow() {
     }
 
     tBubbleWindow.loadFile('t-bubble.html');
-    
+
     // Não permitir interação
     tBubbleWindow.setIgnoreMouseEvents(true, { forward: true });
 
@@ -243,11 +246,11 @@ function createWindow() {
       // Se a janela foi destruída, não fazer nada (ou criar nova se necessário)
       return;
     }
-    
+
     // Verificar se janela está minimizada ou não visível
     const isMinimized = mainWindow.isMinimized();
     const isVisible = mainWindow.isVisible();
-    
+
     if (isMinimized || !isVisible) {
       // Mostrar: restaurar posição
       if (hiddenBounds) {
@@ -322,28 +325,41 @@ function createWindow() {
       if (screenIndex >= 0 && screenIndex < displays.length) {
         const targetDisplay = displays[screenIndex];
         const bounds = targetDisplay.bounds;
-        
+
         // Mover para o centro da tela selecionada
         const x = bounds.x + (bounds.width / 2) - (mainWindow.getSize()[0] / 2);
         const y = bounds.y + (bounds.height / 2) - (mainWindow.getSize()[1] / 2);
-        
+
         mainWindow.setPosition(Math.round(x), Math.round(y));
         // Salvar tela selecionada
         store.set('selectedScreen', screenIndex);
       }
     }
   });
-  
+
   ipcMain.on('get-window-bounds', (event) => {
     if (mainWindow) {
       const bounds = mainWindow.getBounds();
       event.reply('window-bounds', bounds);
     }
   });
-  
+
   ipcMain.on('load-window-bounds', (event) => {
     // Este handler é chamado pelo renderer para aplicar bounds salvos
     // Mas já aplicamos no createWindow, então não precisamos fazer nada aqui
+  });
+
+  // Handler para ativar/desativar modo stealth (proteção de captura)
+  ipcMain.on('toggle-stealth-mode', (event, enabled) => {
+    if (process.platform === 'win32' || process.platform === 'linux') {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.setContentProtection(enabled);
+      }
+      if (tBubbleWindow && !tBubbleWindow.isDestroyed()) {
+        tBubbleWindow.setContentProtection(enabled);
+      }
+      store.set('stealthMode', enabled);
+    }
   });
 
   // Atalhos globais (opcional)
@@ -357,7 +373,7 @@ function createTray() {
   if (app.isPackaged) {
     // Em produção, o ícone está em extraResources (resources/build/icon.ico)
     iconPath = path.join(process.resourcesPath, 'build', 'icon.ico');
-    
+
     // Se não encontrar, tentar outros caminhos possíveis
     if (!fs.existsSync(iconPath)) {
       // Tentar no diretório do app (app.asar.unpacked)
@@ -367,7 +383,7 @@ function createTray() {
       // Tentar diretamente em resources
       iconPath = path.join(process.resourcesPath, 'icon.ico');
     }
-    
+
     // Log para debug (apenas em dev)
     if (process.argv.includes('--dev') && !fs.existsSync(iconPath)) {
       console.log('Ícone não encontrado. Tentou:', path.join(process.resourcesPath, 'build', 'icon.ico'));
@@ -378,17 +394,17 @@ function createTray() {
     // Em desenvolvimento
     iconPath = path.join(__dirname, 'build', 'icon.ico');
   }
-  
+
   // Verificar se o arquivo existe antes de criar o Tray
   if (!fs.existsSync(iconPath)) {
     console.error('Ícone não encontrado em:', iconPath);
     // Usar ícone padrão do Electron se disponível
     return;
   }
-  
+
   // Criar ícone na bandeja
   tray = new Tray(iconPath);
-  
+
   // Criar menu de contexto para o ícone
   const contextMenu = Menu.buildFromTemplate([
     {
@@ -397,7 +413,7 @@ function createTray() {
         if (mainWindow && !mainWindow.isDestroyed()) {
           const isMinimized = mainWindow.isMinimized();
           const isVisible = mainWindow.isVisible();
-          
+
           if (isMinimized || !isVisible) {
             if (hiddenBounds) {
               mainWindow.setBounds(hiddenBounds);
@@ -419,16 +435,16 @@ function createTray() {
       }
     }
   ]);
-  
+
   tray.setToolTip('Teleprompter Stealth Mode');
   tray.setContextMenu(contextMenu);
-  
+
   // Clique simples no ícone também mostra/oculta
   tray.on('click', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       const isMinimized = mainWindow.isMinimized();
       const isVisible = mainWindow.isVisible();
-      
+
       if (isMinimized || !isVisible) {
         if (hiddenBounds) {
           mainWindow.setBounds(hiddenBounds);
@@ -454,13 +470,13 @@ app.on('window-all-closed', () => {
   if (tBubbleWindow && !tBubbleWindow.isDestroyed()) {
     return;
   }
-  
+
   // Manter app rodando se houver ícone na bandeja (Windows/Linux)
   // O app só fecha quando o usuário escolher "Fechar" no menu do ícone
   if (process.platform !== 'darwin' && tray) {
     return;
   }
-  
+
   if (process.platform !== 'darwin') {
     app.quit();
   }

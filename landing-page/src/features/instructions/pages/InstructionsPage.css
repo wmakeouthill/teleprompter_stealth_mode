@@ -78,8 +78,26 @@
     margin-bottom: var(--spacing-lg);
 }
 
-.step-image {
+.step-media {
     margin-top: var(--spacing-md);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: var(--color-bg-secondary);
+}
+
+.step-image,
+.step-video {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: var(--shadow-lg);
+}
+
+.step-video {
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
 }
 
 /* Alternating layout */
