@@ -34,8 +34,27 @@ export function InstructionsPage() {
                                     <Card variant="glass" className="step-card">
                                         <h3 className="step-title">{step.title}</h3>
                                         <p className="step-description">{step.description}</p>
-                                        <div className="step-image">
-                                            <ImagePlaceholder alt={step.imageAlt} aspectRatio="16/9" />
+                                        <div className="step-media">
+                                            {step.mediaType === 'video' ? (
+                                                <video
+                                                    className="step-video"
+                                                    src={step.imageSrc}
+                                                    autoPlay
+                                                    loop
+                                                    muted
+                                                    playsInline
+                                                    aria-label={step.imageAlt}
+                                                />
+                                            ) : step.imageSrc ? (
+                                                <img
+                                                    className="step-image"
+                                                    src={step.imageSrc}
+                                                    alt={step.imageAlt}
+                                                    loading="lazy"
+                                                />
+                                            ) : (
+                                                <ImagePlaceholder alt={step.imageAlt} aspectRatio="16/9" />
+                                            )}
                                         </div>
                                     </Card>
                                 </div>

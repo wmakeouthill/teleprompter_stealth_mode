@@ -27,6 +27,7 @@ const markdownInput = document.getElementById('markdownInput');
 const updateBtn = document.getElementById('updateBtn');
 const resetBtn = document.getElementById('resetBtn');
 const alwaysOnTop = document.getElementById('alwaysOnTop');
+const stealthMode = document.getElementById('stealthMode');
 const screenSelect = document.getElementById('screenSelect');
 const teleprompterContent = document.getElementById('teleprompterContent');
 const teleprompterContainer = document.getElementById('teleprompterContainer');
@@ -309,6 +310,12 @@ alwaysOnTop.addEventListener('change', (e) => {
     saveToLocalStorage('alwaysOnTop', e.target.checked);
 });
 
+// Modo invisível (proteção contra captura de tela)
+stealthMode.addEventListener('change', (e) => {
+    ipcRenderer.send('toggle-stealth-mode', e.target.checked);
+    saveToLocalStorage('stealthMode', e.target.checked);
+});
+
 // Carregar telas disponíveis
 function loadScreens() {
     ipcRenderer.send('get-screens');
@@ -482,6 +489,11 @@ function loadSavedSettings() {
     const savedAlwaysOnTop = loadFromLocalStorage('alwaysOnTop', true);
     alwaysOnTop.checked = savedAlwaysOnTop;
     ipcRenderer.send('toggle-always-on-top', savedAlwaysOnTop);
+
+    // Carregar modo invisível (padrão: ativado)
+    const savedStealthMode = loadFromLocalStorage('stealthMode', true);
+    stealthMode.checked = savedStealthMode;
+    ipcRenderer.send('toggle-stealth-mode', savedStealthMode);
 
     // Carregar velocidade de scroll
     const savedScrollSpeed = loadFromLocalStorage('scrollSpeed', 0);
